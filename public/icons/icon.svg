@@ -1,28 +1,67 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6"/>
-      <stop offset="100%" style="stop-color:#1d4ed8"/>
-    </linearGradient>
+    <!-- Glow filter for lines -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Stronger glow for nodes -->
+    <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <!-- Background -->
-  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <!-- Connection arrows -->
-  <path d="M160 256 Q 256 180 352 256" stroke="rgba(255,255,255,0.4)" stroke-width="8" fill="none" stroke-linecap="round"/>
-  <path d="M352 256 Q 256 332 160 256" stroke="rgba(255,255,255,0.4)" stroke-width="8" fill="none" stroke-linecap="round"/>
-  <!-- Nodes -->
-  <circle cx="160" cy="256" r="48" fill="white"/>
-  <circle cx="352" cy="256" r="48" fill="white"/>
-  <circle cx="256" cy="160" r="36" fill="rgba(255,255,255,0.9)"/>
-  <circle cx="256" cy="352" r="36" fill="rgba(255,255,255,0.9)"/>
-  <!-- Center connection lines -->
-  <line x1="160" y1="220" x2="230" y2="175" stroke="rgba(255,255,255,0.5)" stroke-width="6" stroke-linecap="round"/>
-  <line x1="352" y1="220" x2="282" y2="175" stroke="rgba(255,255,255,0.5)" stroke-width="6" stroke-linecap="round"/>
-  <line x1="160" y1="292" x2="230" y2="337" stroke="rgba(255,255,255,0.5)" stroke-width="6" stroke-linecap="round"/>
-  <line x1="352" y1="292" x2="282" y2="337" stroke="rgba(255,255,255,0.5)" stroke-width="6" stroke-linecap="round"/>
-  <!-- Plus/minus symbols in main nodes -->
-  <text x="160" y="268" text-anchor="middle" font-size="48" font-weight="bold" fill="#3b82f6">+</text>
-  <text x="352" y="268" text-anchor="middle" font-size="48" font-weight="bold" fill="#3b82f6">−</text>
-  <!-- R symbol for reinforcing loop -->
-  <text x="256" y="268" text-anchor="middle" font-size="36" font-weight="bold" fill="rgba(255,255,255,0.8)">R</text>
+
+  <!-- Black background with rounded corners -->
+  <rect width="512" height="512" rx="100" fill="#0a0a0a"/>
+
+  <!-- Graph structure -->
+  <g transform="translate(256,256) scale(5)">
+    <!-- Connection lines with gradient colors and glow -->
+    <g strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" filter="url(#glow)" opacity="0.7">
+      <!-- Lines colored by their endpoints -->
+      <line x1="0" y1="-38" x2="30" y2="-8" stroke="#22d3ee"/>
+      <line x1="30" y1="-8" x2="24" y2="24" stroke="#06b6d4"/>
+      <line x1="24" y1="24" x2="-26" y2="26" stroke="#8b5cf6"/>
+      <line x1="0" y1="-38" x2="10" y2="4" stroke="#38bdf8"/>
+      <line x1="0" y1="-38" x2="-14" y2="0" stroke="#a78bfa"/>
+      <line x1="30" y1="-8" x2="10" y2="4" stroke="#22d3ee"/>
+      <line x1="-26" y1="26" x2="-14" y2="0" stroke="#c084fc"/>
+      <line x1="24" y1="24" x2="10" y2="4" stroke="#2dd4bf"/>
+      <line x1="-14" y1="0" x2="10" y2="4" stroke="#818cf8"/>
+    </g>
+
+    <!-- Nodes with individual colors (purple left → cyan right) and glow -->
+    <g filter="url(#nodeGlow)">
+      <!-- x=-26 leftmost = deep purple -->
+      <circle cx="-26" cy="26" r="6" fill="#a855f7"/>
+      <!-- x=-14 = violet -->
+      <circle cx="-14" cy="0" r="5" fill="#c084fc"/>
+      <!-- x=0 = blue-violet -->
+      <circle cx="0" cy="-38" r="6" fill="#818cf8"/>
+      <!-- x=10 = blue -->
+      <circle cx="10" cy="4" r="5" fill="#38bdf8"/>
+      <!-- x=24 = cyan-blue -->
+      <circle cx="24" cy="24" r="6" fill="#22d3ee"/>
+      <!-- x=30 rightmost = bright cyan -->
+      <circle cx="30" cy="-8" r="6" fill="#06b6d4"/>
+    </g>
+
+    <!-- Bright center highlights on nodes -->
+    <g fill="white" opacity="0.5">
+      <circle cx="-27" cy="25" r="2" />
+      <circle cx="-15" cy="-1" r="1.5" />
+      <circle cx="-1" cy="-39" r="2" />
+      <circle cx="9" cy="3" r="1.5" />
+      <circle cx="23" cy="23" r="2" />
+      <circle cx="29" cy="-9" r="2" />
+    </g>
+  </g>
 </svg>
