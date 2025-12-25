@@ -475,7 +475,7 @@ export default function Studio() {
   return (
     <>
       <Head>
-        <title>{model?.name || 'Studio'} - Systems Thinking Studio</title>
+        <title>{`${model?.name || 'Studio'} - Systems Thinking Studio`}</title>
         <meta name="description" content="Systems thinking and dynamics modeling studio by Ontographia" />
       </Head>
 

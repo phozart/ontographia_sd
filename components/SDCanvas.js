@@ -141,7 +141,12 @@ const SDCanvas = forwardRef(function SDCanvas({
 
   // Handle canvas click
   const handleCanvasClick = useCallback((e) => {
-    if (e.target !== svgRef.current && !e.target.classList.contains('canvas-bg')) return;
+    // Check if click is on canvas background (more robust check for SVG elements)
+    const isCanvasBg = e.target === svgRef.current ||
+                       e.target.classList?.contains('canvas-bg') ||
+                       e.target.getAttribute?.('class')?.includes('canvas-bg') ||
+                       e.target.hasAttribute?.('data-canvas-bg');
+    if (!isCanvasBg) return;
 
     // Skip if we just finished panning
     if (justPannedRef.current) {
@@ -166,7 +171,11 @@ const SDCanvas = forwardRef(function SDCanvas({
 
   // Handle canvas double-click
   const handleCanvasDoubleClick = useCallback((e) => {
-    if (e.target !== svgRef.current && !e.target.classList.contains('canvas-bg')) return;
+    const isCanvasBg = e.target === svgRef.current ||
+                       e.target.classList?.contains('canvas-bg') ||
+                       e.target.getAttribute?.('class')?.includes('canvas-bg') ||
+                       e.target.hasAttribute?.('data-canvas-bg');
+    if (!isCanvasBg) return;
     if (pendingPlacement) return;
 
     const pos = screenToCanvas(e.clientX, e.clientY);
@@ -175,7 +184,11 @@ const SDCanvas = forwardRef(function SDCanvas({
 
   // Handle pan start - left click on empty grid, middle click, or Alt+click
   const handlePanStart = useCallback((e) => {
-    if (e.target !== svgRef.current && !e.target.classList.contains('canvas-bg')) return;
+    const isCanvasBg = e.target === svgRef.current ||
+                       e.target.classList?.contains('canvas-bg') ||
+                       e.target.getAttribute?.('class')?.includes('canvas-bg') ||
+                       e.target.hasAttribute?.('data-canvas-bg');
+    if (!isCanvasBg) return;
     // Left click on grid, middle click, or Alt+click all start panning
     if (e.button === 0 || e.button === 1 || (e.button === 0 && e.altKey)) {
       setIsPanning(true);
@@ -1716,12 +1729,14 @@ const SDCanvas = forwardRef(function SDCanvas({
         {/* Background with grid */}
         <rect
           className="canvas-bg"
+          data-canvas-bg="true"
           width="100%"
           height="100%"
           fill="#fafafa"
         />
         <rect
           className="canvas-bg"
+          data-canvas-bg="true"
           width="100%"
           height="100%"
           fill="url(#grid)"
