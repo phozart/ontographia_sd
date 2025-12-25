@@ -537,9 +537,31 @@ export default function Studio() {
       <Head>
         <title>{`${model?.name || 'Studio'} - Systems Thinking Studio`}</title>
         <meta name="description" content="Systems thinking and dynamics modeling studio by Ontographia" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+
+        {/* PWA Meta Tags */}
+        <meta name="application-name" content="SD Studio" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="SD Studio" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#3b82f6" />
+
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/manifest.json" />
+
+        {/* Icons for iOS */}
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png" />
+
+        {/* Favicon */}
+        <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+
+        {/* Splash screens for iOS */}
+        <meta name="apple-mobile-web-app-orientations" content="portrait-primary" />
       </Head>
 
       <div className="studio-container">
