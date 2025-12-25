@@ -1,17 +1,20 @@
 // pages/privacy.js
 // Privacy Policy for Ontographia SD Studio
 
-import Head from 'next/head';
-import Link from 'next/link';
-import Logo from '../components/Logo';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import Head from "next/head";
+import Link from "next/link";
+import Logo from "../components/Logo";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 export default function Privacy() {
   return (
     <>
       <Head>
         <title>Privacy Policy - Systems Thinking Studio</title>
-        <meta name="description" content="Privacy policy for Systems Thinking Studio by Ontographia. Your data stays in your browser." />
+        <meta
+          name="description"
+          content="Privacy policy for Systems Thinking Studio by Ontographia. Your data stays in your browser."
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </Head>
@@ -34,22 +37,23 @@ export default function Privacy() {
           </Link>
 
           <h1>Privacy Policy</h1>
-          <p className="last-updated">Last updated: December 2024</p>
+          <p className="last-updated">Last updated: December 2025</p>
 
           <section>
             <h2>Overview</h2>
             <p>
-              Ontographia System Dynamics Studio is a free, browser-based learning tool.
-              We are committed to protecting your privacy. This policy explains how
-              we handle your data - which is simple: <strong>we don't collect it</strong>.
+              Ontographia System Dynamics Studio is a free, browser-based
+              learning tool. We are committed to protecting your privacy. This
+              policy explains how we handle your data - which is simple:{" "}
+              <strong>we don't collect it</strong>.
             </p>
           </section>
 
           <section>
             <h2>Data Storage</h2>
             <p>
-              All system dynamics models you create are stored locally in your web browser
-              using <strong>localStorage</strong>. This means:
+              All system dynamics models you create are stored locally in your
+              web browser using <strong>localStorage</strong>. This means:
             </p>
             <ul>
               <li>Your data never leaves your device</li>
@@ -74,17 +78,18 @@ export default function Privacy() {
           <section>
             <h2>Third-Party Services</h2>
             <p>
-              This application does not use any third-party analytics, advertising,
-              or tracking services. We do not integrate with social media platforms
-              or use any external services that could collect your data.
+              This application does not use any third-party analytics,
+              advertising, or tracking services. We do not integrate with social
+              media platforms or use any external services that could collect
+              your data.
             </p>
           </section>
 
           <section>
             <h2>Data Export & Portability</h2>
             <p>
-              You can export your models as JSON files at any time. Since your data
-              is stored locally, you have complete control over it:
+              You can export your models as JSON files at any time. Since your
+              data is stored locally, you have complete control over it:
             </p>
             <ul>
               <li>Export individual models to JSON files</li>
@@ -95,18 +100,20 @@ export default function Privacy() {
 
           <section>
             <h2>Browser Data Persistence</h2>
-            <p>
-              Because data is stored in localStorage:
-            </p>
+            <p>Because data is stored in localStorage:</p>
             <ul>
               <li>Data persists until you clear your browser data</li>
-              <li>Different browsers on the same device will have separate data</li>
-              <li>Private/incognito browsing may not persist data after closing</li>
+              <li>
+                Different browsers on the same device will have separate data
+              </li>
+              <li>
+                Private/incognito browsing may not persist data after closing
+              </li>
               <li>Data is not synced across devices</li>
             </ul>
             <p className="note">
-              <strong>Recommendation:</strong> Export important models as JSON files
-              to back them up or transfer them to other devices.
+              <strong>Recommendation:</strong> Export important models as JSON
+              files to back them up or transfer them to other devices.
             </p>
           </section>
 
@@ -114,8 +121,8 @@ export default function Privacy() {
             <h2>Security</h2>
             <p>
               Since no data is transmitted to our servers, there is no risk of
-              server-side data breaches affecting your models. Your data security
-              depends on your local device and browser security.
+              server-side data breaches affecting your models. Your data
+              security depends on your local device and browser security.
             </p>
           </section>
 
@@ -123,8 +130,8 @@ export default function Privacy() {
             <h2>Children's Privacy</h2>
             <p>
               This tool is designed for educational purposes and is suitable for
-              users of all ages. We do not knowingly collect any information from
-              children because we do not collect information from anyone.
+              users of all ages. We do not knowingly collect any information
+              from children because we do not collect information from anyone.
             </p>
           </section>
 
@@ -132,9 +139,9 @@ export default function Privacy() {
             <h2>Changes to This Policy</h2>
             <p>
               If we make changes to this privacy policy, we will update the
-              "Last updated" date at the top of this page. Since we don't collect
-              email addresses, we cannot notify you of changes - please review
-              this policy periodically.
+              "Last updated" date at the top of this page. Since we don't
+              collect email addresses, we cannot notify you of changes - please
+              review this policy periodically.
             </p>
           </section>
 
@@ -142,10 +149,15 @@ export default function Privacy() {
             <h2>Contact</h2>
             <p>
               If you have questions about this privacy policy, you can contact
-              us through the main Ontographia website at{' '}
-              <a href="https://ontographia.com" target="_blank" rel="noopener noreferrer">
+              us through the main Ontographia website at{" "}
+              <a
+                href="https://ontographia.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 ontographia.com
-              </a>.
+              </a>
+              .
             </p>
           </section>
 
