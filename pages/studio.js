@@ -46,6 +46,11 @@ import FormatBoldIcon from '@mui/icons-material/FormatBold';
 import FormatItalicIcon from '@mui/icons-material/FormatItalic';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import StorageIcon from '@mui/icons-material/Storage';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import PrivacyTipOutlinedIcon from '@mui/icons-material/PrivacyTipOutlined';
 
 // Dynamic import for canvas (client-side only)
 const SDCanvas = dynamic(() => import('../components/SDCanvas'), { ssr: false });
@@ -91,6 +96,9 @@ export default function Studio() {
   const [pendingPlacement, setPendingPlacement] = useState(null); // Element type waiting to be placed
   const [exportBackground, setExportBackground] = useState('white'); // white, transparent, gray
   const [showGuide, setShowGuide] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(true); // Default true to avoid flash
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   // History for undo/redo
   const [history, setHistory] = useState([]);
@@ -123,6 +131,22 @@ export default function Studio() {
     const newModel = createNewModel('Untitled Model', 'cld');
     setModel(newModel);
     setCurrentModelId(newModel.id);
+  }, []);
+
+  // Check if user has seen onboarding
+  useEffect(() => {
+    const seen = localStorage.getItem('sd-studio-onboarding-seen');
+    if (!seen) {
+      setHasSeenOnboarding(false);
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  // Dismiss onboarding
+  const dismissOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    setHasSeenOnboarding(true);
+    localStorage.setItem('sd-studio-onboarding-seen', 'true');
   }, []);
 
   // Save to history for undo/redo
@@ -575,7 +599,30 @@ export default function Studio() {
               <div className="toolbar-label">Connect</div>
               <div className="toolbar-hint">
                 <strong>Click element</strong>
-                then drag from edge handles to connect
+                then drag from green handles to connect
+              </div>
+            </div>
+
+            <div className="toolbar-section">
+              <button className="guide-btn" onClick={() => setShowGuide(true)}>
+                <HelpOutlineIcon fontSize="small" />
+                <span>Systems Thinking Guide</span>
+              </button>
+            </div>
+
+            {/* Bottom section of sidebar */}
+            <div className="toolbar-footer">
+              <button className="footer-btn" onClick={() => setShowOnboarding(true)} title="Getting Started">
+                <LightbulbOutlinedIcon fontSize="small" />
+                <span>Getting Started</span>
+              </button>
+              <button className="footer-btn" onClick={() => setShowPrivacy(true)} title="Privacy Policy">
+                <PrivacyTipOutlinedIcon fontSize="small" />
+                <span>Privacy</span>
+              </button>
+              <div className="storage-badge">
+                <StorageIcon fontSize="small" />
+                <span>Local Storage Only</span>
               </div>
             </div>
           </div>
@@ -957,6 +1004,99 @@ export default function Studio() {
         {/* Systems Thinking Guide Modal */}
         <SDGuideModal open={showGuide} onClose={() => setShowGuide(false)} />
 
+        {/* Onboarding Overlay */}
+        {showOnboarding && (
+          <div className="onboarding-overlay">
+            <div className="onboarding-modal">
+              <div className="onboarding-header">
+                <SchoolOutlinedIcon />
+                <h2>Welcome to Systems Thinking Studio</h2>
+              </div>
+              <div className="onboarding-content">
+                <div className="onboarding-section">
+                  <h3>Getting Started</h3>
+                  <ul>
+                    <li><strong>Add elements:</strong> Click a tool in the left panel, then click the canvas to place it</li>
+                    <li><strong>Connect elements:</strong> Click an element, then drag from the green handles to another element</li>
+                    <li><strong>Edit labels:</strong> Double-click any element to rename it</li>
+                    <li><strong>Move around:</strong> Drag the canvas to pan, use scroll/pinch to zoom</li>
+                  </ul>
+                </div>
+                <div className="onboarding-section">
+                  <h3>Key Concepts</h3>
+                  <ul>
+                    <li><strong>Variables:</strong> Things that change over time (Sales, Population, Stress)</li>
+                    <li><strong>Positive link (+):</strong> Variables change in the same direction</li>
+                    <li><strong>Negative link (−):</strong> Variables change in opposite directions</li>
+                    <li><strong>Feedback loops:</strong> Chains of cause and effect that circle back</li>
+                  </ul>
+                </div>
+                <div className="onboarding-section storage-notice">
+                  <StorageIcon />
+                  <div>
+                    <strong>Your data stays private</strong>
+                    <p>All models are saved locally in your browser. Nothing is sent to any server. Export to JSON to backup or transfer your work.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="onboarding-footer">
+                <button className="onboarding-btn secondary" onClick={() => { dismissOnboarding(); setShowGuide(true); }}>
+                  <HelpOutlineIcon /> Read Full Guide
+                </button>
+                <button className="onboarding-btn primary" onClick={dismissOnboarding}>
+                  Start Creating
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Privacy Modal */}
+        {showPrivacy && (
+          <div className="modal-backdrop" onClick={() => setShowPrivacy(false)}>
+            <div className="modal privacy-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2><PrivacyTipOutlinedIcon /> Privacy Policy</h2>
+                <button className="close-btn" onClick={() => setShowPrivacy(false)}>
+                  <CloseIcon />
+                </button>
+              </div>
+              <div className="privacy-content">
+                <div className="privacy-highlight">
+                  <StorageIcon />
+                  <div>
+                    <strong>Your data stays on your device</strong>
+                    <p>All models are stored in your browser's localStorage. Nothing is sent to any server.</p>
+                  </div>
+                </div>
+
+                <h3>What We Don't Collect</h3>
+                <ul>
+                  <li>Personal information (name, email, etc.)</li>
+                  <li>Usage analytics or tracking data</li>
+                  <li>Your system dynamics models</li>
+                  <li>Cookies for tracking purposes</li>
+                </ul>
+
+                <h3>Data Storage</h3>
+                <ul>
+                  <li>Data persists until you clear browser data</li>
+                  <li>Different browsers have separate data</li>
+                  <li>Private/incognito may not persist data</li>
+                  <li>Export to JSON to backup your work</li>
+                </ul>
+
+                <h3>Third-Party Services</h3>
+                <p>This application does not use any third-party analytics, advertising, or tracking services.</p>
+
+                <div className="privacy-summary">
+                  <strong>Summary:</strong> Your system dynamics models stay on your device. We don't collect, store, or have access to any of your data. This is a free learning tool with no strings attached.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Notification */}
         {notification && (
           <div className={`notification ${notification.type}`}>
@@ -970,7 +1110,7 @@ export default function Studio() {
           display: flex;
           flex-direction: column;
           height: 100vh;
-          background: #f1f5f9;
+          background: #e9eef4;
         }
 
         /* Header - Light theme */
@@ -981,8 +1121,8 @@ export default function Studio() {
           padding: 12px 20px;
           background: #ffffff;
           color: #1e293b;
-          border-bottom: 1px solid #e2e8f0;
           z-index: 100;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .header-left {
@@ -1108,10 +1248,13 @@ export default function Studio() {
         /* Left Toolbar */
         .left-toolbar {
           width: 180px;
-          background: white;
-          border-right: 1px solid #e2e8f0;
+          background: #ffffff;
           padding: 16px;
           overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 1px 0 8px rgba(0, 0, 0, 0.04);
+          z-index: 10;
         }
 
         .toolbar-section {
@@ -1205,6 +1348,69 @@ export default function Studio() {
           margin-bottom: 2px;
         }
 
+        .guide-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #c7d2fe;
+          border-radius: 8px;
+          background: #eef2ff;
+          color: #4f46e5;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .guide-btn:hover {
+          background: #e0e7ff;
+          border-color: #a5b4fc;
+        }
+
+        .toolbar-footer {
+          margin-top: auto;
+          padding-top: 16px;
+          border-top: 1px solid #e2e8f0;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .footer-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          padding: 8px 10px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: white;
+          font-size: 11px;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .footer-btn:hover {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+          color: #475569;
+        }
+
+        .storage-badge {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 10px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 6px;
+          font-size: 10px;
+          color: #166534;
+        }
+
         .type-select {
           width: 100%;
           padding: 8px;
@@ -1218,19 +1424,21 @@ export default function Studio() {
         .canvas-container {
           flex: 1;
           position: relative;
-          padding: 16px;
+          padding: 0;
+          background: #e9eef4;
         }
 
         .canvas-toolbar {
           position: absolute;
-          top: 24px;
-          right: 24px;
+          top: 16px;
+          right: 16px;
           display: flex;
-          gap: 4px;
-          padding: 6px;
-          background: white;
+          gap: 2px;
+          padding: 4px;
+          background: rgba(255, 255, 255, 0.95);
           border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          backdrop-filter: blur(8px);
           z-index: 10;
         }
 
@@ -1286,10 +1494,12 @@ export default function Studio() {
         /* Right Panel */
         .right-panel {
           width: 260px;
-          background: white;
-          border-left: 1px solid #e2e8f0;
+          background: #ffffff;
           padding: 16px;
+          padding-bottom: 32px;
           overflow-y: auto;
+          box-shadow: -1px 0 8px rgba(0, 0, 0, 0.04);
+          z-index: 10;
         }
 
         .right-panel h3 {
@@ -1560,7 +1770,9 @@ export default function Studio() {
         }
 
         .io-section {
-          margin-top: 24px;
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid #e2e8f0;
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -2002,6 +2214,235 @@ export default function Studio() {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
           }
+        }
+
+        /* Onboarding Modal */
+        .onboarding-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          backdrop-filter: blur(4px);
+        }
+
+        .onboarding-modal {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          max-width: 560px;
+          width: 90%;
+          max-height: 85vh;
+          overflow: hidden;
+          animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .onboarding-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 20px 24px;
+          background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+          color: white;
+        }
+
+        .onboarding-header h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 600;
+        }
+
+        .onboarding-content {
+          padding: 24px;
+          overflow-y: auto;
+          max-height: 50vh;
+        }
+
+        .onboarding-section {
+          margin-bottom: 20px;
+        }
+
+        .onboarding-section:last-child {
+          margin-bottom: 0;
+        }
+
+        .onboarding-section h3 {
+          margin: 0 0 12px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .onboarding-section ul {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .onboarding-section li {
+          padding: 8px 0;
+          font-size: 14px;
+          color: #475569;
+          line-height: 1.5;
+          border-bottom: 1px solid #f1f5f9;
+        }
+
+        .onboarding-section li:last-child {
+          border-bottom: none;
+        }
+
+        .onboarding-section li strong {
+          color: #1e293b;
+        }
+
+        .storage-notice {
+          display: flex;
+          gap: 12px;
+          padding: 16px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 8px;
+          color: #166534;
+        }
+
+        .storage-notice p {
+          margin: 4px 0 0;
+          font-size: 13px;
+          color: #15803d;
+        }
+
+        .onboarding-footer {
+          display: flex;
+          gap: 12px;
+          padding: 16px 24px;
+          background: #f8fafc;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .onboarding-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 20px;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .onboarding-btn.primary {
+          flex: 1;
+          background: #6366f1;
+          color: white;
+        }
+
+        .onboarding-btn.primary:hover {
+          background: #4f46e5;
+        }
+
+        .onboarding-btn.secondary {
+          background: white;
+          border: 1px solid #e2e8f0;
+          color: #475569;
+        }
+
+        .onboarding-btn.secondary:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+        }
+
+        /* Privacy Modal */
+        .privacy-modal {
+          max-width: 500px;
+        }
+
+        .privacy-content {
+          padding: 20px;
+          max-height: 60vh;
+          overflow-y: auto;
+        }
+
+        .privacy-highlight {
+          display: flex;
+          gap: 12px;
+          padding: 16px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 8px;
+          color: #166534;
+          margin-bottom: 20px;
+        }
+
+        .privacy-highlight strong {
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        .privacy-highlight p {
+          margin: 0;
+          font-size: 13px;
+          color: #15803d;
+        }
+
+        .privacy-content h3 {
+          margin: 20px 0 12px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .privacy-content h3:first-of-type {
+          margin-top: 0;
+        }
+
+        .privacy-content ul {
+          margin: 0;
+          padding: 0 0 0 20px;
+        }
+
+        .privacy-content li {
+          margin-bottom: 8px;
+          font-size: 13px;
+          color: #475569;
+        }
+
+        .privacy-content p {
+          margin: 0;
+          font-size: 13px;
+          color: #475569;
+          line-height: 1.6;
+        }
+
+        .privacy-summary {
+          margin-top: 20px;
+          padding: 16px;
+          background: #eef2ff;
+          border-radius: 8px;
+          font-size: 13px;
+          color: #4338ca;
+          line-height: 1.6;
+        }
+
+        .privacy-summary strong {
+          color: #4f46e5;
         }
       `}</style>
     </>

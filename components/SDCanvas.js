@@ -94,6 +94,8 @@ const SDCanvas = forwardRef(function SDCanvas({
 
   // Track if we just finished panning (to prevent click after pan)
   const justPannedRef = useRef(false);
+  // Track if we actually moved during pan (to distinguish click from drag)
+  const didPanMoveRef = useRef(false);
 
   // Convert screen coords to canvas coords
   const screenToCanvas = useCallback((screenX, screenY) => {
@@ -197,6 +199,7 @@ const SDCanvas = forwardRef(function SDCanvas({
     if (e.button === 0 || e.button === 1 || (e.button === 0 && e.altKey)) {
       setIsPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      didPanMoveRef.current = false; // Reset move tracker
     }
   }, [pan, pendingPlacement]);
 
@@ -204,6 +207,7 @@ const SDCanvas = forwardRef(function SDCanvas({
   const handleMouseMove = useCallback((e) => {
     if (isPanning) {
       setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+      didPanMoveRef.current = true; // Mark that we actually moved
       return;
     }
 
@@ -393,8 +397,8 @@ const SDCanvas = forwardRef(function SDCanvas({
         }
       }
     }
-    // Set flag if we were panning to prevent click handler
-    if (isPanning) {
+    // Set flag if we were panning AND actually moved to prevent click handler
+    if (isPanning && didPanMoveRef.current) {
       justPannedRef.current = true;
     }
     setIsPanning(false);
