@@ -51,6 +51,8 @@ import StorageIcon from '@mui/icons-material/Storage';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import PrivacyTipOutlinedIcon from '@mui/icons-material/PrivacyTipOutlined';
+import MenuIcon from '@mui/icons-material/Menu';
+import TuneIcon from '@mui/icons-material/Tune';
 
 // Dynamic import for canvas (client-side only)
 const SDCanvas = dynamic(() => import('../components/SDCanvas'), { ssr: false });
@@ -100,6 +102,12 @@ export default function Studio() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(true); // Default true to avoid flash
   const [showPrivacy, setShowPrivacy] = useState(false);
 
+  // Mobile panel visibility
+  const [showLeftPanel, setShowLeftPanel] = useState(false);
+  const [showRightPanel, setShowRightPanel] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileConnectMode, setMobileConnectMode] = useState(false); // For tap-tap connection on mobile
+
   // History for undo/redo
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -141,6 +149,34 @@ export default function Studio() {
       setShowOnboarding(true);
     }
   }, []);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // On mobile, show properties panel when a connection is selected
+  useEffect(() => {
+    if (isMobile && selectedElement) {
+      setShowLeftPanel(false);
+      // Auto-show properties for connections since they need type selection
+      if (selectedElement.elementType === 'edge') {
+        setShowRightPanel(true);
+      }
+    }
+  }, [selectedElement, isMobile]);
+
+  // Clear connect mode if selectedElement is cleared
+  useEffect(() => {
+    if (!selectedElement && mobileConnectMode) {
+      setMobileConnectMode(false);
+    }
+  }, [selectedElement, mobileConnectMode]);
 
   // Dismiss onboarding
   const dismissOnboarding = useCallback(() => {
@@ -501,19 +537,34 @@ export default function Studio() {
       <Head>
         <title>{`${model?.name || 'Studio'} - Systems Thinking Studio`}</title>
         <meta name="description" content="Systems thinking and dynamics modeling studio by Ontographia" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </Head>
 
       <div className="studio-container">
         {/* Header */}
         <header className="studio-header">
           <div className="header-left">
+            {/* Mobile menu button */}
+            {isMobile && (
+              <button
+                className="mobile-menu-btn"
+                onClick={() => { setShowLeftPanel(!showLeftPanel); setShowRightPanel(false); }}
+              >
+                <MenuIcon />
+              </button>
+            )}
+
             <Link href="/" className="logo-link">
               <div className="logo">
-                <Logo size={28} />
-                <div className="logo-text">
-                  <span className="logo-brand">Ontographia</span>
-                  <span className="logo-product">Systems Thinking</span>
-                </div>
+                <Logo size={isMobile ? 24 : 28} />
+                {!isMobile && (
+                  <div className="logo-text">
+                    <span className="logo-brand">Ontographia</span>
+                    <span className="logo-product">Systems Thinking</span>
+                  </div>
+                )}
               </div>
             </Link>
 
@@ -539,28 +590,55 @@ export default function Studio() {
           </div>
 
           <div className="header-actions">
-            <button className="header-btn" onClick={() => setShowExamples(true)} title="Examples">
-              <MenuBookIcon />
-              <span>Examples</span>
-            </button>
-            <button className="header-btn" onClick={() => setShowModels(true)} title="My Models">
-              <FolderOpenIcon />
-              <span>My Models</span>
-            </button>
+            {!isMobile && (
+              <>
+                <button className="header-btn" onClick={() => setShowExamples(true)} title="Examples">
+                  <MenuBookIcon />
+                  <span>Examples</span>
+                </button>
+                <button className="header-btn" onClick={() => setShowModels(true)} title="My Models">
+                  <FolderOpenIcon />
+                  <span>My Models</span>
+                </button>
+              </>
+            )}
             <button className="header-btn primary" onClick={handleSave} title="Save (Ctrl+S)">
               <SaveIcon />
-              <span>Save</span>
+              {!isMobile && <span>Save</span>}
             </button>
+            {isMobile && (
+              <button className="header-btn" onClick={() => setShowModels(true)} title="My Models">
+                <FolderOpenIcon />
+              </button>
+            )}
             <button className="header-btn" onClick={() => setShowGuide(true)} title="Systems Thinking Guide">
               <HelpOutlineIcon />
             </button>
+            {/* Mobile properties toggle */}
+            {isMobile && selectedElement && (
+              <button
+                className="header-btn"
+                onClick={() => { setShowRightPanel(!showRightPanel); setShowLeftPanel(false); }}
+                title="Properties"
+              >
+                <TuneIcon />
+              </button>
+            )}
           </div>
         </header>
 
         {/* Main content */}
         <div className="studio-main">
+          {/* Mobile overlay */}
+          {isMobile && (showLeftPanel || showRightPanel) && (
+            <div
+              className="mobile-overlay"
+              onClick={() => { setShowLeftPanel(false); setShowRightPanel(false); }}
+            />
+          )}
+
           {/* Left Toolbar */}
-          <div className="left-toolbar">
+          <div className={`left-toolbar ${isMobile ? 'mobile' : ''} ${showLeftPanel ? 'open' : ''}`}>
             <div className="toolbar-section">
               <div className="toolbar-label">Elements</div>
               {palette.map((item) => (
@@ -640,6 +718,33 @@ export default function Studio() {
                 pendingPlacement={pendingPlacement}
                 setPendingPlacement={setPendingPlacement}
                 onCanvasReady={setCanvasMethods}
+                isMobile={isMobile}
+                mobileConnectMode={mobileConnectMode}
+                onMobileConnect={(targetElement) => {
+                  // Handle tap-to-connect on mobile - create connection immediately
+                  const sourceId = selectedElement?.id;
+                  const targetId = targetElement?.id;
+
+                  if (sourceId && targetId && sourceId !== targetId) {
+                    // Create connection with neutral type (user can tap it to change)
+                    const newConnId = `conn-${Date.now()}`;
+                    handleModelChange({
+                      ...model,
+                      connections: [...model.connections, {
+                        id: newConnId,
+                        source: sourceId,
+                        target: targetId,
+                        type: 'positive', // Default to positive, user can tap to change
+                        curve: 50,
+                        sourceAnchor: 'auto',
+                        targetAnchor: 'auto',
+                      }],
+                    });
+                    setMobileConnectMode(false);
+                    setSelectedElement(null);
+                    showNotification('Connection created! Tap it to change type.', 'success');
+                  }
+                }}
               />
             )}
 
@@ -676,7 +781,7 @@ export default function Studio() {
           </div>
 
           {/* Right Panel - Properties */}
-          <div className="right-panel">
+          <div className={`right-panel ${isMobile ? 'mobile' : ''} ${showRightPanel ? 'open' : ''}`}>
             <h3>Properties</h3>
             {selectedElement ? (
               <div className="property-form">
@@ -991,6 +1096,94 @@ export default function Studio() {
             </div>
           </div>
         </div>
+
+        {/* Mobile Bottom Toolbar */}
+        {isMobile && (
+          <div className="mobile-toolbar">
+            {/* Show connect button when element selected, otherwise show element buttons */}
+            {selectedElement && selectedElement.elementType === 'node' ? (
+              <>
+                <button
+                  className={`mobile-tool-btn ${mobileConnectMode ? 'active connect-mode' : ''}`}
+                  onClick={() => setMobileConnectMode(!mobileConnectMode)}
+                >
+                  <span className="mobile-tool-icon" style={{ background: mobileConnectMode ? '#22c55e' : '#3b82f6' }}>→</span>
+                  <span>{mobileConnectMode ? 'Tap Target' : 'Connect'}</span>
+                </button>
+                <button
+                  className="mobile-tool-btn"
+                  onClick={() => { setSelectedElement(null); setMobileConnectMode(false); }}
+                >
+                  <span className="mobile-tool-icon" style={{ background: '#94a3b8' }}>✕</span>
+                  <span>Deselect</span>
+                </button>
+                <button
+                  className="mobile-tool-btn"
+                  onClick={handleDeleteSelected}
+                >
+                  <span className="mobile-tool-icon" style={{ background: '#ef4444' }}>🗑</span>
+                  <span>Delete</span>
+                </button>
+                <button
+                  className="mobile-tool-btn"
+                  onClick={() => setShowRightPanel(true)}
+                >
+                  <span className="mobile-tool-icon" style={{ background: '#6366f1' }}>⚙</span>
+                  <span>Props</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className={`mobile-tool-btn ${pendingPlacement === 'variable' ? 'active' : ''}`}
+                  onClick={() => setPendingPlacement(pendingPlacement === 'variable' ? null : 'variable')}
+                >
+                  <span className="mobile-tool-icon" style={{ background: '#64748b' }}>V</span>
+                  <span>Variable</span>
+                </button>
+                <button
+                  className={`mobile-tool-btn ${pendingPlacement === 'stock' ? 'active' : ''}`}
+                  onClick={() => setPendingPlacement(pendingPlacement === 'stock' ? null : 'stock')}
+                >
+                  <span className="mobile-tool-icon" style={{ background: '#475569' }}>▭</span>
+                  <span>Stock</span>
+                </button>
+                <button
+                  className={`mobile-tool-btn ${pendingPlacement === 'flow' ? 'active' : ''}`}
+                  onClick={() => setPendingPlacement(pendingPlacement === 'flow' ? null : 'flow')}
+                >
+                  <span className="mobile-tool-icon" style={{ background: '#64748b' }}>⟿</span>
+                  <span>Flow</span>
+                </button>
+                <button
+                  className={`mobile-tool-btn ${pendingPlacement === 'loop_r' ? 'active' : ''}`}
+                  onClick={() => setPendingPlacement(pendingPlacement === 'loop_r' ? null : 'loop_r')}
+                >
+                  <span className="mobile-tool-icon loop" style={{ background: '#3b82f6' }}>R</span>
+                  <span>Loop</span>
+                </button>
+                <button
+                  className="mobile-tool-btn"
+                  onClick={() => setShowLeftPanel(true)}
+                >
+                  <span className="mobile-tool-icon more">⋯</span>
+                  <span>More</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Mobile connect mode indicator - tappable to cancel */}
+        {isMobile && mobileConnectMode && selectedElement && (
+          <div
+            className="mobile-connect-indicator"
+            onClick={() => setMobileConnectMode(false)}
+          >
+            Tap another element to connect
+            <span className="cancel-hint">Tap here to cancel</span>
+          </div>
+        )}
 
         {/* Examples Modal */}
         {showExamples && (
@@ -2614,6 +2807,360 @@ export default function Studio() {
 
         .privacy-summary strong {
           color: #4f46e5;
+        }
+
+        /* Mobile Styles */
+        .mobile-menu-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border: none;
+          border-radius: 8px;
+          background: transparent;
+          color: #475569;
+          cursor: pointer;
+        }
+
+        .mobile-menu-btn:hover {
+          background: #f1f5f9;
+        }
+
+        .mobile-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.3);
+          z-index: 40;
+        }
+
+        .mobile-toolbar {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          display: flex;
+          justify-content: space-around;
+          padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+          background: white;
+          border-top: 1px solid #e2e8f0;
+          z-index: 50;
+        }
+
+        .mobile-tool-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          padding: 8px 12px;
+          border: none;
+          border-radius: 8px;
+          background: transparent;
+          font-size: 10px;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          min-width: 56px;
+        }
+
+        .mobile-tool-btn:active {
+          transform: scale(0.95);
+        }
+
+        .mobile-tool-btn.active {
+          background: #eff6ff;
+          color: #3b82f6;
+        }
+
+        .mobile-tool-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 700;
+          color: white;
+        }
+
+        .mobile-tool-icon.loop {
+          border-radius: 50%;
+        }
+
+        .mobile-tool-icon.more {
+          background: #94a3b8;
+          font-size: 18px;
+        }
+
+        .mobile-tool-btn.connect-mode {
+          animation: pulse-connect 1.5s infinite;
+        }
+
+        @keyframes pulse-connect {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+
+        .mobile-connect-indicator {
+          position: fixed;
+          bottom: 80px;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 10px 20px;
+          background: #22c55e;
+          color: white;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 600;
+          z-index: 60;
+          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .mobile-connect-indicator .cancel-hint {
+          font-size: 10px;
+          font-weight: 400;
+          opacity: 0.8;
+        }
+
+        .mobile-connect-popup-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          z-index: 200;
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .mobile-connect-popup {
+          background: white;
+          border-radius: 16px 16px 0 0;
+          width: 100%;
+          max-width: 400px;
+          padding: 20px;
+          padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+
+        .mobile-connect-popup-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1e293b;
+          text-align: center;
+          margin-bottom: 16px;
+        }
+
+        .mobile-connect-popup-options {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .mobile-connect-option {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          border: 2px solid #e2e8f0;
+          border-radius: 12px;
+          background: white;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: left;
+        }
+
+        .mobile-connect-option:active {
+          transform: scale(0.98);
+        }
+
+        .mobile-connect-option.positive {
+          border-color: #bbf7d0;
+        }
+
+        .mobile-connect-option.positive:active {
+          background: #dcfce7;
+        }
+
+        .mobile-connect-option.negative {
+          border-color: #fecaca;
+        }
+
+        .mobile-connect-option.negative:active {
+          background: #fee2e2;
+        }
+
+        .mobile-connect-option.neutral {
+          border-color: #e2e8f0;
+        }
+
+        .mobile-connect-option.neutral:active {
+          background: #f1f5f9;
+        }
+
+        .mobile-connect-option .conn-symbol {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          font-size: 24px;
+          font-weight: 700;
+        }
+
+        .mobile-connect-option.positive .conn-symbol {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .mobile-connect-option.negative .conn-symbol {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .mobile-connect-option.neutral .conn-symbol {
+          background: #f1f5f9;
+          color: #475569;
+        }
+
+        .mobile-connect-option span:nth-child(2) {
+          font-size: 15px;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .mobile-connect-option .conn-desc {
+          margin-left: auto;
+          font-size: 12px;
+          font-weight: 400;
+          color: #64748b;
+        }
+
+        .mobile-connect-cancel {
+          width: 100%;
+          padding: 14px;
+          margin-top: 12px;
+          border: none;
+          border-radius: 10px;
+          background: #f1f5f9;
+          color: #64748b;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .mobile-connect-cancel:active {
+          background: #e2e8f0;
+        }
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 767px) {
+          .studio-header {
+            padding: 8px 12px;
+          }
+
+          .model-info {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .model-name {
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .diagram-type {
+            display: none;
+          }
+
+          .header-btn {
+            padding: 8px;
+            min-width: 40px;
+          }
+
+          .header-btn span {
+            display: none;
+          }
+
+          .studio-main {
+            padding-bottom: 72px; /* Space for mobile toolbar */
+          }
+
+          .left-toolbar.mobile {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 220px;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            z-index: 50;
+            padding-top: 60px;
+            box-shadow: 2px 0 16px rgba(0, 0, 0, 0.1);
+          }
+
+          .left-toolbar.mobile.open {
+            transform: translateX(0);
+          }
+
+          .right-panel.mobile {
+            position: fixed;
+            top: auto;
+            bottom: 72px;
+            left: 0;
+            right: 0;
+            width: 100%;
+            max-height: 50vh;
+            transform: translateY(100%);
+            transition: transform 0.25s ease;
+            z-index: 50;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+          }
+
+          .right-panel.mobile.open {
+            transform: translateY(0);
+          }
+
+          .canvas-toolbar {
+            top: 8px;
+            right: 8px;
+            padding: 3px;
+          }
+
+          .canvas-toolbar button {
+            width: 36px;
+            height: 36px;
+          }
+
+          /* Make modals mobile-friendly */
+          .modal {
+            max-width: calc(100vw - 32px);
+            max-height: calc(100vh - 32px);
+            margin: 16px;
+          }
+
+          .modal-lg {
+            max-width: calc(100vw - 32px);
+          }
+
+          .examples-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .onboarding-modal {
+            max-width: calc(100vw - 32px);
+            margin: 16px;
+          }
         }
       `}</style>
     </>

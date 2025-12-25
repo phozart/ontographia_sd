@@ -54,6 +54,9 @@ const SDCanvas = forwardRef(function SDCanvas({
   setPendingPlacement = null,
   readOnly = false,
   onCanvasReady = null, // Callback for when canvas methods are ready
+  mobileConnectMode = false, // Mobile tap-to-connect mode
+  onMobileConnect = null, // Callback for mobile connection
+  isMobile = false, // Whether we're on mobile (hides connection handles)
 }, ref) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
@@ -96,6 +99,11 @@ const SDCanvas = forwardRef(function SDCanvas({
   const justPannedRef = useRef(false);
   // Track if we actually moved during pan (to distinguish click from drag)
   const didPanMoveRef = useRef(false);
+
+  // Touch state for mobile
+  const touchStartRef = useRef(null);
+  const lastTouchDistanceRef = useRef(null);
+  const isTouchPanningRef = useRef(false);
 
   // Convert screen coords to canvas coords
   const screenToCanvas = useCallback((screenX, screenY) => {
@@ -473,15 +481,115 @@ const SDCanvas = forwardRef(function SDCanvas({
     // Add as non-passive to allow preventDefault
     container.addEventListener('wheel', handleWheel, { passive: false });
 
+    // Touch event handlers for mobile
+    const handleTouchStart = (e) => {
+      // Check if touch is on canvas background (not on an element)
+      const target = e.target;
+      const isOnElement = target.closest('.element') !== null;
+
+      if (e.touches.length === 1) {
+        // Single touch - only set up pan if on background
+        const touch = e.touches[0];
+        touchStartRef.current = {
+          x: touch.clientX,
+          y: touch.clientY,
+          time: Date.now(),
+          isOnElement, // Track if started on element
+        };
+        isTouchPanningRef.current = false;
+      } else if (e.touches.length === 2) {
+        // Two touches - pinch to zoom (works anywhere)
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastTouchDistanceRef.current = Math.sqrt(dx * dx + dy * dy);
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 1 && touchStartRef.current) {
+        // Only pan if touch started on background, not on an element
+        if (touchStartRef.current.isOnElement) {
+          return; // Let element handle its own dragging
+        }
+
+        const touch = e.touches[0];
+        const dx = touch.clientX - touchStartRef.current.x;
+        const dy = touch.clientY - touchStartRef.current.y;
+
+        // Start panning if moved more than 10px
+        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+          isTouchPanningRef.current = true;
+          e.preventDefault();
+          setPan(p => ({
+            x: p.x + dx,
+            y: p.y + dy,
+          }));
+          touchStartRef.current = { ...touchStartRef.current, x: touch.clientX, y: touch.clientY };
+        }
+      } else if (e.touches.length === 2 && lastTouchDistanceRef.current) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Calculate zoom center
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const rect = container.getBoundingClientRect();
+        const mouseX = centerX - rect.left;
+        const mouseY = centerY - rect.top;
+
+        const scale = distance / lastTouchDistanceRef.current;
+        lastTouchDistanceRef.current = distance;
+
+        setZoom(prevZoom => {
+          const newZoom = Math.max(0.1, Math.min(4, prevZoom * scale));
+          const actualScale = newZoom / prevZoom;
+
+          setPan(prevPan => ({
+            x: mouseX - (mouseX - prevPan.x) * actualScale,
+            y: mouseY - (mouseY - prevPan.y) * actualScale,
+          }));
+
+          return newZoom;
+        });
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      if (e.touches.length === 0) {
+        if (isTouchPanningRef.current) {
+          justPannedRef.current = true;
+        }
+        touchStartRef.current = null;
+        isTouchPanningRef.current = false;
+        lastTouchDistanceRef.current = null;
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd);
+
     return () => {
       container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
     };
   }, []);
 
-  // Element drag start
+  // Element drag start (mouse)
   const handleElementMouseDown = useCallback((e, element) => {
     if (readOnly) return;
     e.stopPropagation();
+
+    // If in mobile connect mode, trigger connection instead of selection
+    if (mobileConnectMode && onMobileConnect) {
+      onMobileConnect(element);
+      return;
+    }
 
     const pos = screenToCanvas(e.clientX, e.clientY);
     setDragging({
@@ -492,7 +600,20 @@ const SDCanvas = forwardRef(function SDCanvas({
       offsetY: pos.y - element.y,
     });
     onSelectElement?.({ elementType: 'node', ...element });
-  }, [readOnly, screenToCanvas, onSelectElement]);
+  }, [readOnly, screenToCanvas, onSelectElement, mobileConnectMode, onMobileConnect]);
+
+  // Element touch start (mobile) - only intercept for connect mode
+  const handleElementTouchStart = useCallback((e, element) => {
+    if (readOnly) return;
+
+    // Only intercept if in mobile connect mode - otherwise let normal events flow
+    if (mobileConnectMode && onMobileConnect) {
+      e.stopPropagation();
+      // Note: preventDefault not called due to passive listener
+      onMobileConnect(element);
+    }
+    // Don't handle other cases here - let mousedown handle selection/drag
+  }, [readOnly, mobileConnectMode, onMobileConnect]);
 
   // Start drawing a connection from element edge
   const handleEdgeDragStart = useCallback((e, element) => {
@@ -1092,8 +1213,10 @@ const SDCanvas = forwardRef(function SDCanvas({
   const renderElement = (el) => {
     const isSelected = selectedElement?.id === el.id;
     const isDragTarget = dragTarget === el.id;
+    const isConnectSource = mobileConnectMode && isSelected;
     const config = ELEMENT_TYPES[el.type] || ELEMENT_TYPES.variable;
-    const showHandles = isSelected && !readOnly;
+    // Hide connection handles on mobile (use tap-to-connect instead)
+    const showHandles = isSelected && !readOnly && !mobileConnectMode && !isMobile;
 
     // Get element dimensions (with defaults)
     let width = el.width || 100;
@@ -1110,9 +1233,18 @@ const SDCanvas = forwardRef(function SDCanvas({
       <g
         key={el.id}
         transform={`translate(${el.x}, ${el.y})`}
-        onMouseDown={(e) => handleElementMouseDown(e, el)}
+        onPointerDown={(e) => {
+          // Handle mobile connect mode first
+          if (mobileConnectMode && onMobileConnect) {
+            e.stopPropagation();
+            onMobileConnect(el);
+            return;
+          }
+          // Otherwise use normal mouse handling
+          handleElementMouseDown(e, el);
+        }}
         onDoubleClick={(e) => handleElementDoubleClick(e, el)}
-        style={{ cursor: readOnly ? 'default' : 'grab' }}
+        style={{ cursor: readOnly ? 'default' : mobileConnectMode ? 'pointer' : 'grab' }}
         className="element"
       >
         {/* Selection/hover indicator */}
@@ -1123,9 +1255,9 @@ const SDCanvas = forwardRef(function SDCanvas({
             width={width + 16}
             height={height + 16}
             fill="none"
-            stroke={isDragTarget ? '#22c55e' : '#3b82f6'}
-            strokeWidth={2}
-            strokeDasharray={isDragTarget ? '4,4' : 'none'}
+            stroke={isDragTarget ? '#22c55e' : isConnectSource ? '#22c55e' : '#3b82f6'}
+            strokeWidth={isConnectSource ? 3 : 2}
+            strokeDasharray={isDragTarget ? '4,4' : isConnectSource ? '6,3' : 'none'}
             rx={8}
           />
         )}
@@ -1196,7 +1328,7 @@ const SDCanvas = forwardRef(function SDCanvas({
               stroke="white"
               strokeWidth={2}
               style={{ cursor: 'crosshair' }}
-              onMouseDown={(e) => handleEdgeDragStart(e, el)}
+              onPointerDown={(e) => handleEdgeDragStart(e, el)}
             />
             {/* Left handle */}
             <circle
@@ -1207,7 +1339,7 @@ const SDCanvas = forwardRef(function SDCanvas({
               stroke="white"
               strokeWidth={2}
               style={{ cursor: 'crosshair' }}
-              onMouseDown={(e) => handleEdgeDragStart(e, el)}
+              onPointerDown={(e) => handleEdgeDragStart(e, el)}
             />
             {/* Top handle */}
             <circle
@@ -1218,7 +1350,7 @@ const SDCanvas = forwardRef(function SDCanvas({
               stroke="white"
               strokeWidth={2}
               style={{ cursor: 'crosshair' }}
-              onMouseDown={(e) => handleEdgeDragStart(e, el)}
+              onPointerDown={(e) => handleEdgeDragStart(e, el)}
             />
             {/* Bottom handle */}
             <circle
@@ -1229,7 +1361,7 @@ const SDCanvas = forwardRef(function SDCanvas({
               stroke="white"
               strokeWidth={2}
               style={{ cursor: 'crosshair' }}
-              onMouseDown={(e) => handleEdgeDragStart(e, el)}
+              onPointerDown={(e) => handleEdgeDragStart(e, el)}
             />
           </>
         )}
@@ -1654,7 +1786,7 @@ const SDCanvas = forwardRef(function SDCanvas({
               stroke="white"
               strokeWidth={2}
               style={{ cursor: 'move' }}
-              onMouseDown={(e) => handleEndpointDragStart(e, conn, 'source')}
+              onPointerDown={(e) => handleEndpointDragStart(e, conn, 'source')}
             />
             {/* Target endpoint handle */}
             <circle
@@ -1665,7 +1797,7 @@ const SDCanvas = forwardRef(function SDCanvas({
               stroke="white"
               strokeWidth={2}
               style={{ cursor: 'move' }}
-              onMouseDown={(e) => handleEndpointDragStart(e, conn, 'target')}
+              onPointerDown={(e) => handleEndpointDragStart(e, conn, 'target')}
             />
           </>
         )}
@@ -1677,9 +1809,10 @@ const SDCanvas = forwardRef(function SDCanvas({
     <div
       ref={containerRef}
       className={`sd-canvas ${pendingPlacement ? 'placement-mode' : ''}`}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onPointerMove={handleMouseMove}
+      onPointerUp={handleMouseUp}
+      onPointerLeave={handleMouseUp}
+      onPointerCancel={handleMouseUp}
       onContextMenu={handleContextMenu}
     >
       <svg
@@ -1688,8 +1821,8 @@ const SDCanvas = forwardRef(function SDCanvas({
         height="100%"
         onClick={handleCanvasClick}
         onDoubleClick={handleCanvasDoubleClick}
-        onMouseDown={handlePanStart}
-        style={{ cursor: pendingPlacement ? 'crosshair' : isPanning ? 'grabbing' : 'default' }}
+        onPointerDown={handlePanStart}
+        style={{ cursor: pendingPlacement ? 'crosshair' : isPanning ? 'grabbing' : 'default', touchAction: 'none' }}
       >
         <defs>
           {/* Grid pattern */}
