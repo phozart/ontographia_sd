@@ -141,12 +141,12 @@ const SDCanvas = forwardRef(function SDCanvas({
 
   // Handle canvas click
   const handleCanvasClick = useCallback((e) => {
-    // Check if click is on canvas background (more robust check for SVG elements)
-    const isCanvasBg = e.target === svgRef.current ||
-                       e.target.classList?.contains('canvas-bg') ||
-                       e.target.getAttribute?.('class')?.includes('canvas-bg') ||
-                       e.target.hasAttribute?.('data-canvas-bg');
-    if (!isCanvasBg) return;
+    // Check if click is on canvas background
+    const target = e.target;
+    const isSvg = target === svgRef.current;
+    const hasCanvasBgClass = target.classList && target.classList.contains('canvas-bg');
+    const hasDataAttr = target.getAttribute && target.getAttribute('data-canvas-bg') === 'true';
+    if (!isSvg && !hasCanvasBgClass && !hasDataAttr) return;
 
     // Skip if we just finished panning
     if (justPannedRef.current) {
@@ -171,11 +171,11 @@ const SDCanvas = forwardRef(function SDCanvas({
 
   // Handle canvas double-click
   const handleCanvasDoubleClick = useCallback((e) => {
-    const isCanvasBg = e.target === svgRef.current ||
-                       e.target.classList?.contains('canvas-bg') ||
-                       e.target.getAttribute?.('class')?.includes('canvas-bg') ||
-                       e.target.hasAttribute?.('data-canvas-bg');
-    if (!isCanvasBg) return;
+    const target = e.target;
+    const isSvg = target === svgRef.current;
+    const hasCanvasBgClass = target.classList && target.classList.contains('canvas-bg');
+    const hasDataAttr = target.getAttribute && target.getAttribute('data-canvas-bg') === 'true';
+    if (!isSvg && !hasCanvasBgClass && !hasDataAttr) return;
     if (pendingPlacement) return;
 
     const pos = screenToCanvas(e.clientX, e.clientY);
@@ -184,17 +184,21 @@ const SDCanvas = forwardRef(function SDCanvas({
 
   // Handle pan start - left click on empty grid, middle click, or Alt+click
   const handlePanStart = useCallback((e) => {
-    const isCanvasBg = e.target === svgRef.current ||
-                       e.target.classList?.contains('canvas-bg') ||
-                       e.target.getAttribute?.('class')?.includes('canvas-bg') ||
-                       e.target.hasAttribute?.('data-canvas-bg');
-    if (!isCanvasBg) return;
-    // Left click on grid, middle click, or Alt+click all start panning
+    const target = e.target;
+    const isSvg = target === svgRef.current;
+    const hasCanvasBgClass = target.classList && target.classList.contains('canvas-bg');
+    const hasDataAttr = target.getAttribute && target.getAttribute('data-canvas-bg') === 'true';
+    if (!isSvg && !hasCanvasBgClass && !hasDataAttr) return;
+
+    // Don't start panning if we're in placement mode - let click handler place the element
+    if (pendingPlacement && e.button === 0) return;
+
+    // Left click on grid (when not placing), middle click, or Alt+click all start panning
     if (e.button === 0 || e.button === 1 || (e.button === 0 && e.altKey)) {
       setIsPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     }
-  }, [pan]);
+  }, [pan, pendingPlacement]);
 
   // Handle mouse move (pan + drag)
   const handleMouseMove = useCallback((e) => {
@@ -338,18 +342,14 @@ const SDCanvas = forwardRef(function SDCanvas({
       const sourceEl = model.elements.find(el => el.id === drawingConnection.sourceId);
       const targetEl = model.elements.find(el => el.id === dragTarget);
       if (sourceEl && targetEl) {
-        // Determine anchors based on drop position
-        const targetAnchor = getClosestAnchor(targetEl, drawingConnection.currentX, drawingConnection.currentY);
-        // Source anchor is opposite direction from source to target
-        const sourceAnchor = getClosestAnchor(sourceEl, targetEl.x, targetEl.y);
-
         const rect = containerRef.current?.getBoundingClientRect();
         if (rect) {
+          // Use 'auto' anchors by default - they'll be calculated dynamically
           setConnectionPopup({
             sourceId: drawingConnection.sourceId,
             targetId: dragTarget,
-            sourceAnchor,
-            targetAnchor,
+            sourceAnchor: 'auto',
+            targetAnchor: 'auto',
             x: rect.left + pan.x + targetEl.x * zoom,
             y: rect.top + pan.y + targetEl.y * zoom - 40,
           });
@@ -379,18 +379,14 @@ const SDCanvas = forwardRef(function SDCanvas({
           ),
         });
 
-        // Determine anchors
-        const sourceAnchor = getClosestAnchor(sourceEl, targetEl.x, targetEl.y);
-        const targetAnchor = getClosestAnchor(targetEl, sourceEl.x, sourceEl.y);
-
-        // Show popup at target element position
+        // Show popup at target element position - use 'auto' anchors by default
         const rect = containerRef.current?.getBoundingClientRect();
         if (rect) {
           setConnectionPopup({
             sourceId: dragging.id,
             targetId: dragTarget,
-            sourceAnchor,
-            targetAnchor,
+            sourceAnchor: 'auto',
+            targetAnchor: 'auto',
             x: rect.left + pan.x + targetEl.x * zoom,
             y: rect.top + pan.y + targetEl.y * zoom - 40,
           });
