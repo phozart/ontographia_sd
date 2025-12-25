@@ -885,7 +885,11 @@ const SDCanvas = forwardRef(function SDCanvas({
       const endY = targetEdge.y - (toTarget.y / toLen) * 8;
 
       const pathD = `M ${sourceEdge.x} ${sourceEdge.y} Q ${ctrlX} ${ctrlY} ${endX} ${endY}`;
-      const isDashed = conn.type === 'negative';
+
+      // Line style - solid, dashed, or dotted (default based on type for backwards compat)
+      const lineStyle = conn.lineStyle || (conn.type === 'negative' ? 'dashed' : 'solid');
+      const strokeDasharray = lineStyle === 'dashed' ? '6,4' : lineStyle === 'dotted' ? '2,3' : '';
+      const strokeWidth = conn.strokeWidth || 1.5;
       const polarityLabel = conn.type === 'positive' ? '+' : conn.type === 'negative' ? '−' : '';
 
       // Label near arrow
@@ -913,7 +917,7 @@ const SDCanvas = forwardRef(function SDCanvas({
       }
 
       return `<g>
-        <path d="${pathD}" fill="none" stroke="#475569" stroke-width="1.5" ${isDashed ? 'stroke-dasharray="6,4"' : ''} marker-end="url(#export-arrow)"/>
+        <path d="${pathD}" fill="none" stroke="#475569" stroke-width="${strokeWidth}" ${strokeDasharray ? `stroke-dasharray="${strokeDasharray}"` : ''} marker-end="url(#export-arrow)"/>
         <text x="${labelX}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" fill="#475569" font-family="system-ui, -apple-system, sans-serif">${polarityLabel}</text>
         ${delayMarkup}
       </g>`;
@@ -1549,7 +1553,13 @@ const SDCanvas = forwardRef(function SDCanvas({
     const endY = targetEdge.y - (toTarget.y / toLen) * arrowOffset;
 
     const pathD = `M ${sourceEdge.x} ${sourceEdge.y} Q ${ctrlX} ${ctrlY} ${endX} ${endY}`;
-    const isDashed = conn.type === 'negative';
+
+    // Line style - solid, dashed, or dotted (default based on type for backwards compat)
+    const lineStyle = conn.lineStyle || (conn.type === 'negative' ? 'dashed' : 'solid');
+    const strokeDasharray = lineStyle === 'dashed' ? '6,4' : lineStyle === 'dotted' ? '2,3' : 'none';
+
+    // Line thickness - default 1.5
+    const strokeWidth = conn.strokeWidth || 1.5;
 
     // Position label near the arrow (at 80% along the curve toward target)
     const t = 0.75;
@@ -1576,8 +1586,8 @@ const SDCanvas = forwardRef(function SDCanvas({
           d={pathD}
           fill="none"
           stroke={isSelected ? '#3b82f6' : '#475569'}
-          strokeWidth={isSelected ? 2 : 1.5}
-          strokeDasharray={isDashed ? '6,4' : 'none'}
+          strokeWidth={isSelected ? strokeWidth + 0.5 : strokeWidth}
+          strokeDasharray={strokeDasharray}
           markerEnd="url(#arrowhead)"
           style={{ pointerEvents: 'none' }}
         />
@@ -1819,6 +1829,12 @@ const SDCanvas = forwardRef(function SDCanvas({
           >
             − Negative
           </button>
+          <button
+            className="conn-btn neutral"
+            onClick={() => handleCreateConnection('neutral')}
+          >
+            ○ Neutral
+          </button>
         </div>
       )}
 
@@ -1968,6 +1984,15 @@ const SDCanvas = forwardRef(function SDCanvas({
 
         .conn-btn.negative:hover {
           background: #fecaca;
+        }
+
+        .conn-btn.neutral {
+          background: #f1f5f9;
+          color: #475569;
+        }
+
+        .conn-btn.neutral:hover {
+          background: #e2e8f0;
         }
 
         .element {

@@ -789,38 +789,117 @@ export default function Studio() {
                     </button>
                   </>
                 )}
-                {selectedElement.elementType === 'edge' && (
-                  <>
-                    <p className="hint" style={{ marginBottom: 12 }}>Drag the arrow to adjust its curve</p>
-                    <p className="hint" style={{ marginBottom: 12 }}>Drag orange handles to change anchor points</p>
+                {selectedElement.elementType === 'edge' && (() => {
+                  const conn = model?.connections.find(c => c.id === selectedElement.id);
+                  if (!conn) return null;
 
-                    {/* Delay toggle for connections */}
-                    <div className="property-group">
-                      <label>Time Delay</label>
-                      <button
-                        className={`delay-toggle ${model?.connections.find(c => c.id === selectedElement.id)?.hasDelay ? 'active' : ''}`}
-                        onClick={() => {
-                          const conn = model?.connections.find(c => c.id === selectedElement.id);
-                          if (conn) {
-                            handleModelChange({
-                              ...model,
-                              connections: model.connections.map(c =>
-                                c.id === conn.id ? { ...c, hasDelay: !c.hasDelay } : c
-                              ),
-                            });
-                          }
-                        }}
-                      >
-                        <span className="delay-icon">||</span>
-                        {model?.connections.find(c => c.id === selectedElement.id)?.hasDelay ? 'Delay On' : 'Add Delay'}
+                  const updateConnection = (updates) => {
+                    handleModelChange({
+                      ...model,
+                      connections: model.connections.map(c =>
+                        c.id === conn.id ? { ...c, ...updates } : c
+                      ),
+                    });
+                  };
+
+                  return (
+                    <>
+                      <p className="hint" style={{ marginBottom: 12 }}>Drag the arrow to adjust its curve</p>
+                      <p className="hint" style={{ marginBottom: 12 }}>Drag orange handles to change anchor points</p>
+
+                      {/* Connection Type */}
+                      <div className="property-group">
+                        <label>Connection Type</label>
+                        <div className="conn-type-row">
+                          <button
+                            className={`conn-type-btn ${conn.type === 'positive' ? 'active' : ''}`}
+                            onClick={() => updateConnection({ type: 'positive' })}
+                            title="Positive (+)"
+                          >
+                            +
+                          </button>
+                          <button
+                            className={`conn-type-btn ${conn.type === 'negative' ? 'active' : ''}`}
+                            onClick={() => updateConnection({ type: 'negative' })}
+                            title="Negative (−)"
+                          >
+                            −
+                          </button>
+                          <button
+                            className={`conn-type-btn ${conn.type === 'neutral' ? 'active' : ''}`}
+                            onClick={() => updateConnection({ type: 'neutral' })}
+                            title="Neutral (no sign)"
+                          >
+                            ○
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Line Style */}
+                      <div className="property-group">
+                        <label>Line Style</label>
+                        <div className="line-style-row">
+                          <button
+                            className={`line-style-btn ${(!conn.lineStyle || conn.lineStyle === 'solid') ? 'active' : ''}`}
+                            onClick={() => updateConnection({ lineStyle: 'solid' })}
+                            title="Solid line"
+                          >
+                            <svg width="32" height="12"><line x1="2" y1="6" x2="30" y2="6" stroke="currentColor" strokeWidth="2"/></svg>
+                          </button>
+                          <button
+                            className={`line-style-btn ${conn.lineStyle === 'dashed' ? 'active' : ''}`}
+                            onClick={() => updateConnection({ lineStyle: 'dashed' })}
+                            title="Dashed line"
+                          >
+                            <svg width="32" height="12"><line x1="2" y1="6" x2="30" y2="6" stroke="currentColor" strokeWidth="2" strokeDasharray="6,4"/></svg>
+                          </button>
+                          <button
+                            className={`line-style-btn ${conn.lineStyle === 'dotted' ? 'active' : ''}`}
+                            onClick={() => updateConnection({ lineStyle: 'dotted' })}
+                            title="Dotted line"
+                          >
+                            <svg width="32" height="12"><line x1="2" y1="6" x2="30" y2="6" stroke="currentColor" strokeWidth="2" strokeDasharray="2,3"/></svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Line Thickness */}
+                      <div className="property-group">
+                        <label>Line Thickness</label>
+                        <div className="thickness-row">
+                          {[1, 1.5, 2, 3, 4].map(thickness => (
+                            <button
+                              key={thickness}
+                              className={`thickness-btn ${(conn.strokeWidth || 1.5) === thickness ? 'active' : ''}`}
+                              onClick={() => updateConnection({ strokeWidth: thickness })}
+                              title={`${thickness}px`}
+                            >
+                              <svg width="24" height="16">
+                                <line x1="4" y1="8" x2="20" y2="8" stroke="currentColor" strokeWidth={thickness} strokeLinecap="round"/>
+                              </svg>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Time Delay toggle */}
+                      <div className="property-group">
+                        <label>Time Delay</label>
+                        <button
+                          className={`delay-toggle ${conn.hasDelay ? 'active' : ''}`}
+                          onClick={() => updateConnection({ hasDelay: !conn.hasDelay })}
+                        >
+                          <span className="delay-icon">||</span>
+                          {conn.hasDelay ? 'Delay On' : 'Add Delay'}
+                        </button>
+                      </div>
+
+                      <button className="delete-btn" onClick={handleDeleteSelected}>
+                        <DeleteIcon /> Delete Connection
                       </button>
-                    </div>
-
-                    <button className="delete-btn" onClick={handleDeleteSelected}>
-                      <DeleteIcon /> Delete Connection
-                    </button>
-                  </>
-                )}
+                    </>
+                  );
+                })()}
               </div>
             ) : (
               <div className="no-selection">
@@ -1645,6 +1724,98 @@ export default function Studio() {
         .action-btn:hover {
           background: #f1f5f9;
           border-color: #cbd5e1;
+        }
+
+        .conn-type-row {
+          display: flex;
+          gap: 6px;
+        }
+
+        .conn-type-btn {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 8px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: white;
+          font-size: 16px;
+          font-weight: 700;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .conn-type-btn:hover {
+          border-color: #cbd5e1;
+          background: #f8fafc;
+        }
+
+        .conn-type-btn.active {
+          border-color: #3b82f6;
+          background: #eff6ff;
+          color: #3b82f6;
+        }
+
+        .line-style-row {
+          display: flex;
+          gap: 6px;
+        }
+
+        .line-style-btn {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 6px;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: white;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .line-style-btn:hover {
+          border-color: #cbd5e1;
+          background: #f8fafc;
+        }
+
+        .line-style-btn.active {
+          border-color: #3b82f6;
+          background: #eff6ff;
+          color: #3b82f6;
+        }
+
+        .thickness-row {
+          display: flex;
+          gap: 4px;
+        }
+
+        .thickness-btn {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          background: white;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .thickness-btn:hover {
+          border-color: #cbd5e1;
+          background: #f8fafc;
+        }
+
+        .thickness-btn.active {
+          border-color: #3b82f6;
+          background: #eff6ff;
+          color: #3b82f6;
         }
 
         .delay-toggle {
