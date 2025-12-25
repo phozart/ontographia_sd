@@ -1,0 +1,53 @@
+# .dockerignore for Systems Thinking Studio
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+.yarn
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Testing
+coverage
+
+# Development
+.git
+.gitignore
+*.md
+!README.md
+
+# Environment files
+.env
+.env.*
+.env.local
+.env.development
+.env.production.local
+
+# IDE and editor
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Docker files (avoid recursive builds)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+*.pem
+.vercel
+*.tsbuildinfo
+next-env.d.ts
