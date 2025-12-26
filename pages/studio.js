@@ -53,6 +53,9 @@ import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import PrivacyTipOutlinedIcon from '@mui/icons-material/PrivacyTipOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
 import TuneIcon from '@mui/icons-material/Tune';
+import TabletIcon from '@mui/icons-material/Tablet';
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows';
+import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 
 // Dynamic import for canvas (client-side only)
 const SDCanvas = dynamic(() => import('../components/SDCanvas'), { ssr: false });
@@ -102,11 +105,15 @@ export default function Studio() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(true); // Default true to avoid flash
   const [showPrivacy, setShowPrivacy] = useState(false);
 
-  // Mobile panel visibility
+  // Mobile/Tablet panel visibility
   const [showLeftPanel, setShowLeftPanel] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false); // Auto-detected small screen
+  const [tabletMode, setTabletMode] = useState(null); // null = auto, true = forced tablet, false = forced desktop
   const [mobileConnectMode, setMobileConnectMode] = useState(false); // For tap-tap connection on mobile
+
+  // Computed isMobile: tabletMode overrides auto-detection
+  const isMobile = tabletMode === null ? isSmallScreen : tabletMode;
 
   // History for undo/redo
   const [history, setHistory] = useState([]);
@@ -150,14 +157,40 @@ export default function Studio() {
     }
   }, []);
 
-  // Detect mobile screen size
+  // Detect screen size and load tablet mode preference
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsSmallScreen(window.innerWidth < 768);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
+
+    // Load saved tablet mode preference
+    const savedTabletMode = localStorage.getItem('sd-studio-tablet-mode');
+    if (savedTabletMode !== null) {
+      setTabletMode(savedTabletMode === 'true' ? true : savedTabletMode === 'false' ? false : null);
+    }
+
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Toggle tablet mode handler
+  const handleToggleTabletMode = useCallback(() => {
+    setTabletMode(prev => {
+      // Cycle: auto (null) -> tablet (true) -> desktop (false) -> auto (null)
+      let next;
+      if (prev === null) next = true;      // auto -> tablet
+      else if (prev === true) next = false; // tablet -> desktop
+      else next = null;                      // desktop -> auto
+
+      // Persist to localStorage
+      if (next === null) {
+        localStorage.removeItem('sd-studio-tablet-mode');
+      } else {
+        localStorage.setItem('sd-studio-tablet-mode', String(next));
+      }
+      return next;
+    });
   }, []);
 
   // On mobile, show properties panel when a connection is selected
@@ -635,6 +668,14 @@ export default function Studio() {
             )}
             <button className="header-btn" onClick={() => setShowGuide(true)} title="Systems Thinking Guide">
               <HelpOutlineIcon />
+            </button>
+            {/* Tablet/Desktop mode toggle */}
+            <button
+              className={`header-btn ${tabletMode !== null ? 'active' : ''}`}
+              onClick={handleToggleTabletMode}
+              title={`Mode: ${tabletMode === null ? 'Auto' : tabletMode ? 'Tablet' : 'Desktop'} (click to switch)`}
+            >
+              {tabletMode === true ? <TabletIcon /> : tabletMode === false ? <DesktopWindowsIcon /> : <PhoneAndroidIcon />}
             </button>
             {/* Mobile properties toggle */}
             {isMobile && selectedElement && (

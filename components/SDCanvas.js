@@ -482,78 +482,80 @@ const SDCanvas = forwardRef(function SDCanvas({
     container.addEventListener('wheel', handleWheel, { passive: false });
 
     // Touch event handlers for mobile
+    // Design: 1 finger = interact with elements, 2 fingers = pan + zoom
     const handleTouchStart = (e) => {
-      // Check if touch is on canvas background (not on an element)
-      const target = e.target;
-      const isOnElement = target.closest('.element') !== null;
-
       if (e.touches.length === 1) {
-        // Single touch - only set up pan if on background
+        // Single touch - just track for potential tap, NO panning
         const touch = e.touches[0];
         touchStartRef.current = {
           x: touch.clientX,
           y: touch.clientY,
           time: Date.now(),
-          isOnElement, // Track if started on element
         };
         isTouchPanningRef.current = false;
       } else if (e.touches.length === 2) {
-        // Two touches - pinch to zoom (works anywhere)
+        // Two touches - pan + zoom mode
         e.preventDefault();
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         lastTouchDistanceRef.current = Math.sqrt(dx * dx + dy * dy);
+        // Track center for panning
+        touchStartRef.current = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+          isTwoFinger: true,
+        };
+        isTouchPanningRef.current = true;
       }
     };
 
     const handleTouchMove = (e) => {
-      if (e.touches.length === 1 && touchStartRef.current) {
-        // Only pan if touch started on background, not on an element
-        if (touchStartRef.current.isOnElement) {
-          return; // Let element handle its own dragging
-        }
-
-        const touch = e.touches[0];
-        const dx = touch.clientX - touchStartRef.current.x;
-        const dy = touch.clientY - touchStartRef.current.y;
-
-        // Start panning if moved more than 10px
-        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-          isTouchPanningRef.current = true;
-          e.preventDefault();
-          setPan(p => ({
-            x: p.x + dx,
-            y: p.y + dy,
-          }));
-          touchStartRef.current = { ...touchStartRef.current, x: touch.clientX, y: touch.clientY };
-        }
-      } else if (e.touches.length === 2 && lastTouchDistanceRef.current) {
+      if (e.touches.length === 1) {
+        // Single finger - don't pan, let elements handle their own interaction
+        return;
+      } else if (e.touches.length === 2 && touchStartRef.current?.isTwoFinger) {
         e.preventDefault();
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Calculate zoom center
+        // Calculate center for pan + zoom
         const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         const rect = container.getBoundingClientRect();
         const mouseX = centerX - rect.left;
         const mouseY = centerY - rect.top;
 
-        const scale = distance / lastTouchDistanceRef.current;
+        // Pan based on center movement
+        const panDx = centerX - touchStartRef.current.x;
+        const panDy = centerY - touchStartRef.current.y;
+
+        // Update pan
+        setPan(p => ({
+          x: p.x + panDx,
+          y: p.y + panDy,
+        }));
+
+        // Zoom based on pinch distance change
+        if (lastTouchDistanceRef.current) {
+          const scale = distance / lastTouchDistanceRef.current;
+
+          setZoom(prevZoom => {
+            const newZoom = Math.max(0.1, Math.min(4, prevZoom * scale));
+            const actualScale = newZoom / prevZoom;
+
+            // Adjust pan to zoom toward center
+            setPan(prevPan => ({
+              x: mouseX - (mouseX - prevPan.x) * actualScale,
+              y: mouseY - (mouseY - prevPan.y) * actualScale,
+            }));
+
+            return newZoom;
+          });
+        }
+
         lastTouchDistanceRef.current = distance;
-
-        setZoom(prevZoom => {
-          const newZoom = Math.max(0.1, Math.min(4, prevZoom * scale));
-          const actualScale = newZoom / prevZoom;
-
-          setPan(prevPan => ({
-            x: mouseX - (mouseX - prevPan.x) * actualScale,
-            y: mouseY - (mouseY - prevPan.y) * actualScale,
-          }));
-
-          return newZoom;
-        });
+        touchStartRef.current = { ...touchStartRef.current, x: centerX, y: centerY };
       }
     };
 
@@ -563,6 +565,16 @@ const SDCanvas = forwardRef(function SDCanvas({
           justPannedRef.current = true;
         }
         touchStartRef.current = null;
+        isTouchPanningRef.current = false;
+        lastTouchDistanceRef.current = null;
+      } else if (e.touches.length === 1 && touchStartRef.current?.isTwoFinger) {
+        // Went from 2 fingers to 1 - reset to single finger mode
+        const touch = e.touches[0];
+        touchStartRef.current = {
+          x: touch.clientX,
+          y: touch.clientY,
+          time: Date.now(),
+        };
         isTouchPanningRef.current = false;
         lastTouchDistanceRef.current = null;
       }
